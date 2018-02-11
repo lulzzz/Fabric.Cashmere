@@ -15,7 +15,3 @@ is_unit() {
 is_e2e() {
     [[ "${PHASE}" = e2e ]]
 }
-
-is_lib_build() {
-    [[ "${PHASE}" = lib_build ]]
-}

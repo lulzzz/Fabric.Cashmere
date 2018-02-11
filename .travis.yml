@@ -12,22 +12,25 @@ before_script:
   - npm install
 
 stages:
-  - install
   - test
   - deploy
   - release
 jobs:
   include:
+    - env: "PHASE=lint"
+    - env: "PHASE=aot"
+    - env: "PHASE=unit"
+    - env: "PHASE=lib_build"
     - stage: test
-      script: npm run lint
-      script: npm run ci:build
-      script: npm run ci:test
+      script: ./scripts/travis-script.sh
     - stage: deploy
       script: npm run lib:build
       deploy:
         provider: azure_web_apps
         file: lib/deploy/*
         skip_cleanup: true
+        on: 
+          branch: travis-deploy
 
 cache:
   directories:
