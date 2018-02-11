@@ -8,25 +8,29 @@ node_js:
 addons:
   chrome: stable
 
-jobs:
-  include:
-    - env: "PHASE=lint"
-    - env: "PHASE=aot"
-    - env: "PHASE=unit"
-    - env: "PHASE=lib_build"
-#    - env: "PHASE=e2e"
-
-install:
+before_script:
   - npm install
 
-script:
-  - ./scripts/travis-script.sh
+stages:
+  - install
+  - test
+  - deploy
+  - release
+jobs:
+  include:
+    - stage: test
+      script: npm run lint
+      script: npm run ci:build
+      script: npm run ci:test
+    - stage: deploy
+      script: npm run lib:build
+      deploy:
+        provider: azure_web_apps
+        file: lib/deploy/*
+        skip_cleanup: true
 
 cache:
   directories:
     - ./node_modules/
 
-deploy:
-  provider: azure_web_apps
-  file: lib/deploy/*
-  skip_cleanup: true
+
