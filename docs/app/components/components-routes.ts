@@ -1,3 +1,4 @@
+import { GridDemoComponent } from './grid/grid-demo.component';
 import { TypeFormSurveyDemoComponent } from './typeform-survey/typeform-survey-demo.component';
 import { TabDemoComponent } from './tabs/tab-demo.component';
 import { Routes } from '@angular/router';
@@ -84,6 +85,11 @@ export const routes: Routes = [
                 path: 'subnav',
                 component: SubnavDemoComponent,
                 data: { title: 'Subnavbar' }
+            },
+            {
+                path: 'grid',
+                component: GridDemoComponent,
+                data: { title: 'Grid'}
             },
             {
                 path: 'breadcrumbs',
