@@ -1,3 +1,4 @@
+import { MasterCheckboxComponent } from './master-checkbox.component';
 import { GridOptions } from './grid-options';
 import { UpdatePageEvent } from './update-page-event';
 import { PaginatorComponent } from './paginator.component';
@@ -17,10 +18,12 @@ import {
     ContentChildren,
     ContentChild,
     OnChanges,
-    SimpleChanges,
+    SimpleChanges
 } from '@angular/core';
 import { SortEvent } from './sort-event';
 import { SortableComponent } from './sortable.component';
+import { SelectableComponent } from './selectable.component';
+import { SelectEvent } from './select-event';
 
 @Component({
     selector: 'table[hc-grid]',
@@ -31,9 +34,12 @@ export class GridComponent implements OnChanges, AfterContentInit {
     @Input() gridOptions: GridOptions = { rowsPerPage: 10 };
     @HostBinding('class.hc-table') public hcTable = true;
     @ContentChildren(SortableComponent) public sortableHeaders: QueryList<SortableComponent>;
+    @ContentChildren(SelectableComponent) public selectableRows: QueryList<SelectableComponent>;
     @ContentChild(PaginatorComponent) public paginator: PaginatorComponent;
+    @ContentChild(MasterCheckboxComponent) public masterCheckbox: MasterCheckboxComponent;
     pages: number[] = [];
     rows: any[] = [];
+    selectedRows: any[] = [];
     currentPage: number = 1;
     rowsPerPage: number = 10;
     pageCount: number | undefined;
@@ -44,7 +50,6 @@ export class GridComponent implements OnChanges, AfterContentInit {
         if (simpleChanges['gridOptions']) {
             this.rowsPerPage = this.gridOptions.rowsPerPage || this.rowsPerPage;
             this.pageCount = this.gridOptions.pageCount;
-            this.showChecks = this.gridOptions.showChecks || this.showChecks;
             this.currentPage = this.gridOptions.pageNumber || this.currentPage;
             if (this.gridOptions.sortByColumn) {
                 this.sortEvent.sortColumn = this.gridOptions.sortByColumn;
@@ -58,7 +63,13 @@ export class GridComponent implements OnChanges, AfterContentInit {
     ngAfterContentInit() {
         this.sortableHeaders.map(sh => sh.sortEvent.subscribe(se => this.sort(se)));
         this.paginator.updatePageEvent.subscribe(pe => this.updatePage(pe));
+        this.masterCheckbox.masterCheckboxEvent.subscribe(mc => this.masterCheckboxClicked(mc));
+        this.selectableRows.changes.subscribe(() => this.subscribeToRows())
         this.updateData();
+    }
+
+    private subscribeToRows() {
+        this.selectableRows.map(sr => sr.selectEvent.subscribe(se => this.selectRow(se)));
     }
 
     private updateData() {
@@ -70,13 +81,42 @@ export class GridComponent implements OnChanges, AfterContentInit {
         }
     }
 
+    private masterCheckboxClicked(masterCheckboxState: boolean) {
+        this.rows.map(r => r.selected = masterCheckboxState);
+        this.fullDataSet.map(r => r.selected = masterCheckboxState);
+
+    }
+
+    private selectRow(selectEvent: SelectEvent) {
+        let row = this.fullDataSet.find(r => r === selectEvent.row);
+        let displayRow = this.rows.find(r => r === selectEvent.row);
+        row.selected = selectEvent.selected;
+        displayRow.selected = selectEvent.selected;
+        let index = this.selectedRows.findIndex(r => r === row);
+        if (index > -1) {
+            this.selectedRows.splice(index, 1);
+        } else {
+            this.selectedRows.push(row);
+        }
+
+        if (this.selectedRows.length > 0 && this.selectedRows.length < this.fullDataSet.length) {
+            this.masterCheckbox.setIndeterminateState();
+        } else if (this.selectedRows.length === 0) {
+            this.masterCheckbox.setUncheckedState();
+        } else {
+            this.masterCheckbox.setCheckedState();
+        }
+    }
+
     private sort(sortEvent: SortEvent) {
         if (this.sortableHeaders) {
             this.sortableHeaders
-            .filter(sh => sh.sortableKey !== sortEvent.sortColumn)
+                .filter(sh => sh.sortableKey !== sortEvent.sortColumn)
                 .map(sh => sh.resetHeader());
 
-            let sortedHeader: SortableComponent | undefined = this.sortableHeaders.find(sh => sh.sortableKey === sortEvent.sortColumn);
+            let sortedHeader: SortableComponent | undefined = this.sortableHeaders.find(
+                sh => sh.sortableKey === sortEvent.sortColumn
+            );
             if (sortedHeader) {
                 sortedHeader.activeSort = true;
                 sortedHeader.sortAsc = sortEvent.sortDirection === 'asc';
@@ -90,9 +130,9 @@ export class GridComponent implements OnChanges, AfterContentInit {
 
             this.fullDataSet.sort(
                 (prev, curr) =>
-                prev[sortEvent.sortColumn] > curr[sortEvent.sortColumn]
-                ? sortOrderLeft
-                : sortOrderRight
+                    prev[sortEvent.sortColumn] > curr[sortEvent.sortColumn]
+                        ? sortOrderLeft
+                        : sortOrderRight
             );
             this.currentPage = 1;
             if (this.paginator) {
